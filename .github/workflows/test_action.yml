@@ -3,7 +3,7 @@ name: Add bugs to bugs project
 on:
   issues:
     types:
-      - opened
+      - closed
 
 jobs:
   add-to-project:
@@ -16,5 +16,3 @@ jobs:
           # to the issue
           project-url: https://github.com/users/tyshko5/projects/1
           github-token: ${{ secrets.TEST_SECRET }}
-          labeled: bug, needs-triage
-          label-operator: OR
