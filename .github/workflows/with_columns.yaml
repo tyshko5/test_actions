@@ -1,11 +1,13 @@
-name: Add PR to project
+name: Add closed issues to project board
+
 on:
-  pull_request:
-    types:
-      - ready_for_review
+  issues:
+    types: [closed]
+
 jobs:
-  track_pr:
+  track_closed_issues:
     runs-on: ubuntu-latest
+
     steps:
       - name: Get project data
         env:
@@ -14,54 +16,73 @@ jobs:
           PROJECT_NUMBER: 1
         run: |
           gh api graphql -f query='
-            query($username: String!, $number: Int!) {
-              repositoryOwner(login: $username){
-                repository(name: "YOUR_PROJECT_NAME", owner: $username) {
+            query($number: Int!) {
+              repository(number: $number) {
+                projectV2(number: $number) {
                   id
-                  project(number: $number) {
-                    id
-                    fields(first:20) {
-                      nodes {
-                        ... on ProjectField {
+                  fields(first:20) {
+                    nodes {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
                           id
                           name
-                        }
-                        ... on ProjectSingleSelectField {
-                          id
-                          name
-                          options {
-                            id
-                            name
-                          }
                         }
                       }
                     }
                   }
                 }
               }
-            }' -f username=$USERNAME -F number=$PROJECT_NUMBER > project_data.json
+            }' -F number=$PROJECT_NUMBER > project_data.json
 
-          echo 'PROJECT_ID='$(jq '.data.repositoryOwner.repository.project.id' project_data.json) >> $GITHUB_ENV
-          echo 'DATE_FIELD_ID='$(jq '.data.repositoryOwner.repository.project.fields.nodes[] | select(.name== "Date posted") | .id' project_data.json) >> $GITHUB_ENV
-          echo 'STATUS_FIELD_ID='$(jq '.data.repositoryOwner.repository.project.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_ENV
-          echo 'TODO_OPTION_ID='$(jq '.data.repositoryOwner.repository.project.fields.nodes[] | select(.name== "Status") | .options[] | select(.name=="Todo") |.id' project_data.json) >> $GITHUB_ENV
+          echo 'PROJECT_ID='$(jq '.data.repository.projectV2.id' project_data.json) >> $GITHUB_ENV
+          echo 'DATE_FIELD_ID='$(jq '.data.repository.projectV2.fields.nodes[] | select(.name== "Date closed") | .id' project_data.json) >> $GITHUB_ENV
 
-      - name: Add PR to project
+      - name: Add issue to project
         env:
           GITHUB_TOKEN: ${{ secrets.TEST_SECRET }}
-          PR_ID: ${{ github.event.pull_request.node_id }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
         run: |
-          item_id="$( gh api graphql -f query='
-            mutation($project:ID!, $pr:ID!) {
-              addProjectItem(input: {projectId: $project, contentId: $pr}) {
+          item_id="$(gh api graphql -f query='
+            mutation($project:ID!, $issue:ID!) {
+              addProjectV2ItemById(input: {projectId: $project, contentId: $issue}) {
                 item {
                   id
                 }
               }
-            }' -f project=$PROJECT_ID -f pr=$PR_ID --jq '.data.addProjectItem.item.id')"
+            }' -f project=$PROJECT_ID -f issue=$ISSUE_ID --jq '.data.addProjectV2ItemById.item.id')"
 
-            echo 'ITEM_ID='$item_id >> $GITHUB_ENV
+          echo 'ITEM_ID='$item_id >> $GITHUB_ENV
 
       - name: Get date
         run: echo "DATE=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
 
+      - name: Set date closed field
+        env:
+          GITHUB_TOKEN: ${{ secrets.TEST_SECRET }}
+        run: |
+          gh api graphql -f query='
+            mutation (
+              $project: ID!
+              $item: ID!
+              $date_field: ID!
+              $date_value: Date!
+            ) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $date_field
+                value: { 
+                  date: $date_value
+                }
+              }) {
+                projectV2Item {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f date_field=$DATE_
