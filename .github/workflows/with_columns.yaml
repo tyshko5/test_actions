@@ -64,6 +64,18 @@ jobs:
       - name: Echo current date
         run: echo $DATE
 
+      - name: Get Date Field ID
+        id: get_date_field_id
+        run: |
+          echo "::set-output name=date_field_id::$(curl -X GET \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/projects/columns/${{ env.project_column_id }}/cards?per_page=100" \
+            | jq -r '.[] | .content_url' \
+            | xargs -I {} curl -X GET \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            {} \
+            | jq -r '.[] | select(.name == "Date") | .id')"
+
       - name: Set date closed field
         env:
           GITHUB_TOKEN: ${{ secrets.TEST_SECRET }}
@@ -87,4 +99,4 @@ jobs:
                   id
                 }
               }
-            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f date_field="Date" -f date_value=$DATE
+            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f date_field=${{ steps.get_date_field_id.outputs.date_field_id }} -f date_value=$DATE
