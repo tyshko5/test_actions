@@ -76,6 +76,27 @@ jobs:
             {} \
             | jq -r '.[] | select(.name == "Date") | .id')"
 
+
+      - name: Get Project Columns
+        id: get_columns
+        uses: actions/github-script@0.7.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.TEST_SECRET }}
+        with:
+          script: |
+            const columns = await github.projects.listColumns({
+              project_id: context.payload.project.id,
+            })
+            return columns.data;
+
+      - name: Print Field Names
+        run: |
+          echo "Project Field Names: "
+          for column in ${{ steps.get_columns.outputs.data }}
+          do
+            echo "${column.name}"
+          done
+
       - name: Echo current date
         run: echo ${{ steps.get_date_field_id.outputs.date_field_id }}
 
