@@ -87,4 +87,4 @@ jobs:
                   id
                 }
               }
-            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f date_field="Date" date_value=$DATE
+            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f date_field="Date" -f date_value=$DATE
