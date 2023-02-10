@@ -76,6 +76,9 @@ jobs:
             {} \
             | jq -r '.[] | select(.name == "Date") | .id')"
 
+      - name: Echo current date
+        run: echo ${{ steps.get_date_field_id.outputs.date_field_id }}
+
       - name: Set date closed field
         env:
           GITHUB_TOKEN: ${{ secrets.TEST_SECRET }}
