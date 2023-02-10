@@ -85,7 +85,7 @@ jobs:
         with:
           script: |
             const columns = await github.projects.listColumns({
-              project_id: context.payload.project.id,
+              project_id: 1,
             })
             return columns.data;
 
