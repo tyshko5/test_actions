@@ -61,7 +61,7 @@ jobs:
 
       - name: Get date
         run: |
-          echo "DATE=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
+          echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
           echo $DATE
 
       - name: Set date closed field
